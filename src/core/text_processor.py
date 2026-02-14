@@ -21,9 +21,10 @@ class TextProcessor:
         执行以下操作：
         - 删除开头空格
         - 删除空白段落
-        - 自动插入第一章标题
         - 分离章节标题为独立段落，章节间保留两行空余
-        - 为段落开头添加两个空格缩进
+        - 为段落开头添加两个中文空格缩进
+
+        注意：如果文本中没有章节标题（序章或第X章），则视为单章节小说，不添加章节标题。
 
         Args:
             text: 要清理的文本
@@ -53,18 +54,19 @@ class TextProcessor:
 
     @staticmethod
     def _insert_first_chapter(text: str) -> str:
-        """插入第一章标题
+        """检测章节标题
 
-        检测整个文本中是否已经有章节标题（序章或第X章），
-        如果没有则插入"第一章"标题，否则不添加。
+        检测整个文本中是否已经有章节标题（序章或第X章）。
+        如果没有，则视为单章节小说，不添加章节标题。
+
+        Args:
+            text: 要处理的文本
+
+        Returns:
+            原始文本（不修改）
         """
-        # 检测文本中是否已有章节标题（序章 或 第X章）
-        chapter_pattern = r'^\s*(序章|第[一二三四五六七八九十百千零0-9]+章)'
-        has_chapter = any(re.match(chapter_pattern, line) for line in text.splitlines())
-
-        if not has_chapter:
-            text = "第一章\n" + text
-
+        # 此方法保留用于向后兼容，实际上不修改文本
+        # 单章节小说不需要添加章节标题
         return text
 
     @staticmethod
@@ -100,13 +102,15 @@ class TextProcessor:
 
     @staticmethod
     def _add_paragraph_indent(text: str) -> str:
-        """为段落开头添加两个空格缩进
+        """为段落开头添加两个中文空格缩进
 
         章节标题行不添加缩进。
         """
         lines = []
         # 匹配章节标题：序章 或 第X章
         chapter_pattern = r'^\s*(序章|第[一二三四五六七八九十百千零0-9]+章)$'
+        # 中文全角空格
+        chinese_space = '　'
 
         for line in text.splitlines():
             stripped_line = line.strip()
@@ -116,8 +120,8 @@ class TextProcessor:
                     # 章节标题不添加缩进
                     lines.append(stripped_line)
                 else:
-                    # 普通段落添加两个空格缩进
-                    lines.append('  ' + stripped_line)
+                    # 普通段落添加两个中文空格缩进
+                    lines.append(chinese_space * 2 + stripped_line)
             else:
                 # 空行保留
                 lines.append('')
