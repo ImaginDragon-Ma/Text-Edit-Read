@@ -10,8 +10,10 @@ from PyQt5.QtWidgets import (
     QAction,
     QFileDialog,
     QMessageBox,
+    QShortcut,
 )
-from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtGui import QFont, QIcon, QKeySequence
+from PyQt5.QtCore import Qt
 
 from src.utils.config import (
     APP_ICON_NAME,
@@ -83,6 +85,9 @@ class TextEditor(QMainWindow):
         open_action = QAction('打开', self)
         save_action = QAction('保存', self)
 
+        # 设置快捷键
+        save_action.setShortcut('Ctrl+S')
+
         open_action.triggered.connect(self._open_file)
         save_action.triggered.connect(self._save_file)
 
@@ -104,9 +109,26 @@ class TextEditor(QMainWindow):
         edit_menu.addAction(replace_action)
 
     def _init_connections(self) -> None:
-        """初始化信号连接"""
-        # 未来可以在这里添加更多信号连接
-        pass
+        """初始化信号连接和快捷键"""
+        # 添加 Ctrl+S 保存快捷键
+        save_shortcut = QShortcut(QKeySequence('Ctrl+S'), self)
+        save_shortcut.activated.connect(self._save_file)
+
+        # 添加 Ctrl+Z 撤销快捷键
+        undo_shortcut = QShortcut(QKeySequence('Ctrl+Z'), self)
+        undo_shortcut.activated.connect(self._undo)
+
+        # 添加 Ctrl+Y 重做快捷键
+        redo_shortcut = QShortcut(QKeySequence('Ctrl+Y'), self)
+        redo_shortcut.activated.connect(self._redo)
+
+    def _undo(self) -> None:
+        """撤销操作"""
+        self.text_edit.undo()
+
+    def _redo(self) -> None:
+        """重做操作"""
+        self.text_edit.redo()
 
     def _open_file(self) -> None:
         """打开文件"""
