@@ -77,7 +77,7 @@ class TextProcessor:
         - 序章
         - 第X章（如：第一章、第二章等）
 
-        章节标题前后保留两行空余。
+        章节标题定格写，不添加空格缩进。
         """
         lines = text.splitlines()
         result = []
@@ -87,12 +87,7 @@ class TextProcessor:
         for line in lines:
             stripped_line = line.strip()
             if re.match(chapter_pattern, stripped_line):
-                # 章节标题前后添加两行空余
-                # 如果不是第一行，在前面添加两行空行
-                if result:
-                    result.append('')  # 空行1
-                    result.append('')  # 空行2
-                # 添加章节标题（不带空格）
+                # 添加章节标题（定格写，不带空格缩进）
                 result.append(stripped_line)
             elif stripped_line:
                 # 非空行，直接添加
