@@ -45,6 +45,7 @@ class TextEditor(QMainWindow):
 
         self._text_content: str = ""
         self._current_file: Optional[Path] = None
+        self._saved_content: Optional[str] = None  # 保存的内容快照，用于恢复
 
         self._init_ui()
         self._init_connections()
@@ -97,7 +98,7 @@ class TextEditor(QMainWindow):
         # 编辑菜单
         edit_menu = menubar.addMenu('编辑')
         undo_action = QAction('撤销', self)
-        redo_action = QAction('重做', self)
+        redo_action = QAction('恢复保存', self)  # 重做改为恢复保存
         clean_action = QAction('整理文本', self)
         find_action = QAction('查找', self)
         replace_action = QAction('替换', self)
@@ -129,8 +130,36 @@ class TextEditor(QMainWindow):
         self.text_edit.undo()
 
     def _redo(self) -> None:
-        """重做操作"""
-        self.text_edit.redo()
+        """恢复到上一次保存的内容
+
+        Ctrl+Y 功能：恢复到上一次保存的状态，而非文本编辑的重做。
+        """
+        if self._saved_content is None:
+            QMessageBox.information(
+                self,
+                '提示',
+                '没有可恢复的保存记录'
+            )
+            return
+
+        # 询问用户是否确认恢复
+        reply = QMessageBox.question(
+            self,
+            '恢复确认',
+            '是否恢复到上一次保存的内容？\n\n注意：这将覆盖当前编辑的内容。',
+            QMessageBox.Yes | QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            # 使用 QTextCursor 替换文本，保留撤销功能
+            cursor = self.text_edit.textCursor()
+            cursor.select(cursor.Document)  # 选择全部内容
+            cursor.insertText(self._saved_content)  # 插入保存的内容（可撤销）
+            QMessageBox.information(
+                self,
+                '恢复成功',
+                '已恢复到上一次保存的内容'
+            )
 
     def _open_file(self) -> None:
         """打开文件"""
@@ -171,6 +200,9 @@ class TextEditor(QMainWindow):
 
                 FileHandler.save_file(path, content)
 
+                # 保存当前内容快照（用于"重做"恢复功能）
+                self._saved_content = content
+
                 self._current_file = path
                 self.setWindowTitle(f'{APP_NAME} - {path.name}')
                 QMessageBox.information(
@@ -192,11 +224,14 @@ class TextEditor(QMainWindow):
                 )
 
     def _clean_text(self) -> None:
-        """整理文本"""
+        """整理文本（支持撤销）"""
         self._text_content = self.text_edit.toPlainText()
         try:
             self._text_content = TextProcessor.clean_text(self._text_content)
-            self.text_edit.setText(self._text_content)
+            # 使用 QTextCursor 替换文本，保留撤销功能
+            cursor = self.text_edit.textCursor()
+            cursor.select(cursor.Document)  # 选择全部内容
+            cursor.insertText(self._text_content)  # 插入新文本（可撤销）
         except Exception as e:
             QMessageBox.warning(
                 self,
@@ -212,7 +247,15 @@ class TextEditor(QMainWindow):
     def _replace_text(self) -> None:
         """打开替换对话框"""
         replace_dialog = ReplaceDialog(self)
+        replace_dialog.textReplaced.connect(self._on_text_replaced)  # 连接替换完成信号
         replace_dialog.show()
+
+    def _on_text_replaced(self, new_text: str) -> None:
+        """文本替换完成回调（支持撤销）"""
+        # 使用 QTextCursor 替换文本，保留撤销功能
+        cursor = self.text_edit.textCursor()
+        cursor.select(cursor.Document)  # 选择全部内容
+        cursor.insertText(new_text)  # 插入新文本（可撤销）
 
     @property
     def text_content(self) -> str:

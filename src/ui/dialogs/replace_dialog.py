@@ -2,6 +2,7 @@
 
 提供文本替换功能的对话框。
 """
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QDialog,
@@ -16,7 +17,12 @@ from src.core.text_processor import TextProcessor
 
 
 class ReplaceDialog(QDialog):
-    """替换对话框"""
+    """替换对话框
+
+    替换完成时发送 textReplaced 信号，包含新文本内容。
+    """
+
+    textReplaced = pyqtSignal(str)  # 替换完成信号，发送新文本
 
     def __init__(self, parent):
         """初始化替换对话框
@@ -108,7 +114,8 @@ class ReplaceDialog(QDialog):
                     new_text
                 )
 
-            self._parent.text_edit.setText("\n".join(new_text_content))
+            # 发送替换完成信号（包含新文本）
+            self.textReplaced.emit("\n".join(new_text_content))
             self._parent.text_edit.setFocus()
         except Exception as e:
             # 替换失败时的处理
