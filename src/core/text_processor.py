@@ -55,16 +55,16 @@ class TextProcessor:
     def _insert_first_chapter(text: str) -> str:
         """插入第一章标题
 
-        检测文本第一行是否已经是章节标题（序章或第X章），
-        如果不是则插入"第一章"标题，否则不添加。
+        检测整个文本中是否已经有章节标题（序章或第X章），
+        如果没有则插入"第一章"标题，否则不添加。
         """
-        lines = text.splitlines()
-        if lines:
-            first_line = lines[0].strip()
-            # 检测是否已经是章节标题（序章 或 第X章）
-            chapter_pattern = r'^序章$|^第[一二三四五六七八九十百千零0-9]+章'
-            if not re.match(chapter_pattern, first_line):
-                text = "第一章\n" + text
+        # 检测文本中是否已有章节标题（序章 或 第X章）
+        chapter_pattern = r'^\s*(序章|第[一二三四五六七八九十百千零0-9]+章)'
+        has_chapter = any(re.match(chapter_pattern, line) for line in text.splitlines())
+
+        if not has_chapter:
+            text = "第一章\n" + text
+
         return text
 
     @staticmethod
