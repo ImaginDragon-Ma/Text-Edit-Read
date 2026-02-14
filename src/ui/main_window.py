@@ -96,31 +96,33 @@ class TextEditor(QMainWindow):
 
         # 编辑菜单
         edit_menu = menubar.addMenu('编辑')
+        undo_action = QAction('撤销', self)
+        redo_action = QAction('重做', self)
         clean_action = QAction('整理文本', self)
         find_action = QAction('查找', self)
         replace_action = QAction('替换', self)
 
+        # 设置快捷键
+        undo_action.setShortcut('Ctrl+Z')
+        redo_action.setShortcut('Ctrl+Y')
+
+        undo_action.triggered.connect(self._undo)
+        redo_action.triggered.connect(self._redo)
         clean_action.triggered.connect(self._clean_text)
         find_action.triggered.connect(self._find_text)
         replace_action.triggered.connect(self._replace_text)
 
+        edit_menu.addAction(undo_action)
+        edit_menu.addAction(redo_action)
+        edit_menu.addSeparator()
         edit_menu.addAction(clean_action)
         edit_menu.addAction(find_action)
         edit_menu.addAction(replace_action)
 
     def _init_connections(self) -> None:
         """初始化信号连接和快捷键"""
-        # 添加 Ctrl+S 保存快捷键
-        save_shortcut = QShortcut(QKeySequence('Ctrl+S'), self)
-        save_shortcut.activated.connect(self._save_file)
-
-        # 添加 Ctrl+Z 撤销快捷键
-        undo_shortcut = QShortcut(QKeySequence('Ctrl+Z'), self)
-        undo_shortcut.activated.connect(self._undo)
-
-        # 添加 Ctrl+Y 重做快捷键
-        redo_shortcut = QShortcut(QKeySequence('Ctrl+Y'), self)
-        redo_shortcut.activated.connect(self._redo)
+        # 快捷键已在菜单项中设置，无需重复绑定
+        pass
 
     def _undo(self) -> None:
         """撤销操作"""
