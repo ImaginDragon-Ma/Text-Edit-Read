@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "changetxt"
+version = "0.2.0"
+description = "基于 PyQt5 的文本编辑与处理工具"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = ["text-editor", "pyqt5", "text-processing"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Text Editors",
+    "Topic :: Text Processing",
+]
+dependencies = [
+    "PyQt5>=5.15.0",
+    "chardet>=5.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=22.0.0",
+    "mypy>=0.990",
+]
+
+[project.scripts]
+changetxt = "main:main"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/changetxt"
+Repository = "https://github.com/yourusername/changetxt"
+Issues = "https://github.com/yourusername/changetxt/issues"
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.setuptools.package-data]
+"src" = ["py.typed"]
+
+[tool.black]
+line-length = 100
+target-version = ['py37', 'py38', 'py39', 'py310', 'py311']
+
+[tool.mypy]
+python_version = "3.7"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

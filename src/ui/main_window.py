@@ -1,0 +1,202 @@
+"""主窗口模块
+
+定义应用程序的主窗口和核心 UI 组件。
+"""
+from pathlib import Path
+from typing import Optional
+
+from PyQt5.QtWidgets import (
+    QMainWindow,
+    QAction,
+    QFileDialog,
+    QMessageBox,
+)
+from PyQt5.QtGui import QFont, QIcon
+
+from src.utils.config import (
+    APP_ICON_NAME,
+    APP_NAME,
+    DEFAULT_FONT_FAMILY,
+    DEFAULT_FONT_SIZE,
+    HIGHLIGHT_COLOR,
+    ICONS_DIR,
+    WINDOW_HEIGHT,
+    WINDOW_WIDTH,
+    WINDOW_X,
+    WINDOW_Y,
+)
+from src.utils.exceptions import FileOperationError
+from src.core.text_processor import TextProcessor
+from src.ui.dialogs import FindDialog, ReplaceDialog
+from src.ui.widgets import ZoomTextEdit
+
+
+class TextEditor(QMainWindow):
+    """文本编辑器主窗口
+
+    提供完整的文本编辑功能，包括文件操作、文本处理、查找和替换等。
+    """
+
+    def __init__(self):
+        """初始化主窗口"""
+        super().__init__()
+
+        self._text_content: str = ""
+        self._current_file: Optional[Path] = None
+
+        self._init_ui()
+        self._init_connections()
+
+    def _init_ui(self) -> None:
+        """初始化UI界面"""
+        # 设置窗口标题和图标
+        self.setWindowTitle(APP_NAME)
+        self._set_window_icon()
+        self.setGeometry(WINDOW_X, WINDOW_Y, WINDOW_WIDTH, WINDOW_HEIGHT)
+
+        # 设置文本编辑区域
+        self.text_edit = ZoomTextEdit(self)
+        self.setCentralWidget(self.text_edit)
+
+        # 设置默认字体
+        default_font = QFont(DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE)
+        self.text_edit.setFont(default_font)
+
+        # 创建菜单栏
+        self._create_menu_bar()
+
+    def _set_window_icon(self) -> None:
+        """设置窗口图标"""
+        icon_path = ICONS_DIR / APP_ICON_NAME
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
+        else:
+            # 图标不存在时忽略，不影响程序运行
+            pass
+
+    def _create_menu_bar(self) -> None:
+        """创建菜单栏"""
+        menubar = self.menuBar()
+
+        # 文件菜单
+        file_menu = menubar.addMenu('文件')
+        open_action = QAction('打开', self)
+        save_action = QAction('保存', self)
+
+        open_action.triggered.connect(self._open_file)
+        save_action.triggered.connect(self._save_file)
+
+        file_menu.addAction(open_action)
+        file_menu.addAction(save_action)
+
+        # 编辑菜单
+        edit_menu = menubar.addMenu('编辑')
+        clean_action = QAction('整理文本', self)
+        find_action = QAction('查找', self)
+        replace_action = QAction('替换', self)
+
+        clean_action.triggered.connect(self._clean_text)
+        find_action.triggered.connect(self._find_text)
+        replace_action.triggered.connect(self._replace_text)
+
+        edit_menu.addAction(clean_action)
+        edit_menu.addAction(find_action)
+        edit_menu.addAction(replace_action)
+
+    def _init_connections(self) -> None:
+        """初始化信号连接"""
+        # 未来可以在这里添加更多信号连接
+        pass
+
+    def _open_file(self) -> None:
+        """打开文件"""
+        file_path, _ = QFileDialog.getOpenFileName(self, '打开文件')
+        if file_path:
+            try:
+                from src.core.file_handler import FileHandler
+
+                path = Path(file_path)
+                content = FileHandler.read_file(path)
+
+                self._text_content = content
+                self._current_file = path
+                self.text_edit.setText(content)
+                self.setWindowTitle(f'{APP_NAME} - {path.name}')
+            except FileOperationError as e:
+                QMessageBox.critical(
+                    self,
+                    '文件错误',
+                    str(e)
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    '错误',
+                    f'打开文件时发生未知错误：{e}'
+                )
+
+    def _save_file(self) -> None:
+        """保存文件"""
+        file_path, _ = QFileDialog.getSaveFileName(self, '保存文件')
+        if file_path:
+            try:
+                from src.core.file_handler import FileHandler
+
+                path = Path(file_path)
+                content = self.text_edit.toPlainText()
+
+                FileHandler.save_file(path, content)
+
+                self._current_file = path
+                self.setWindowTitle(f'{APP_NAME} - {path.name}')
+                QMessageBox.information(
+                    self,
+                    '保存成功',
+                    f'文件已保存到：{path.name}'
+                )
+            except FileOperationError as e:
+                QMessageBox.critical(
+                    self,
+                    '保存失败',
+                    str(e)
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    '错误',
+                    f'保存文件时发生未知错误：{e}'
+                )
+
+    def _clean_text(self) -> None:
+        """整理文本"""
+        self._text_content = self.text_edit.toPlainText()
+        try:
+            self._text_content = TextProcessor.clean_text(self._text_content)
+            self.text_edit.setText(self._text_content)
+        except Exception as e:
+            QMessageBox.warning(
+                self,
+                '处理失败',
+                f'文本整理失败：{e}'
+            )
+
+    def _find_text(self) -> None:
+        """打开查找对话框"""
+        find_dialog = FindDialog(self)
+        find_dialog.show()
+
+    def _replace_text(self) -> None:
+        """打开替换对话框"""
+        replace_dialog = ReplaceDialog(self)
+        replace_dialog.show()
+
+    @property
+    def text_content(self) -> str:
+        """获取文本内容"""
+        return self._text_content
+
+    @text_content.setter
+    def text_content(self, value: str) -> None:
+        """设置文本内容"""
+        self._text_content = value
+        self.text_edit.setText(value)
