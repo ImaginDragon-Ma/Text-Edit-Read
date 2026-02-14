@@ -22,8 +22,8 @@ class TextProcessor:
         - 删除开头空格
         - 删除空白段落
         - 自动插入第一章标题
-        - 分离章节标题为独立段落
-        - 调整换行格式
+        - 分离章节标题为独立段落，章节间保留两行空余
+        - 为段落开头添加两个空格缩进
 
         Args:
             text: 要清理的文本
@@ -36,7 +36,7 @@ class TextProcessor:
             text = TextProcessor._remove_empty_paragraphs(text)
             text = TextProcessor._insert_first_chapter(text)
             text = TextProcessor._separate_chapter_titles(text)
-            text = TextProcessor._insert_newline_at_word(text, '\n')
+            text = TextProcessor._add_paragraph_indent(text)
             return text
         except Exception as e:
             raise TextProcessingError(f"文本清理失败: {e}") from e
@@ -68,26 +68,60 @@ class TextProcessor:
         return text
 
     @staticmethod
-    def _insert_newline_at_word(text: str, word: str) -> str:
-        """检测每行中的指定词，在其后插入换行符"""
-        return re.sub(f'({word})', r'\1\n　　', text)
-
-    @staticmethod
     def _separate_chapter_titles(text: str) -> str:
         """检测章节标题，如果不独立则将其独立为一段
 
         支持的章节标题格式：
         - 序章
         - 第X章（如：第一章、第二章等）
+
+        章节标题前后保留两行空余。
+        """
+        lines = text.splitlines()
+        result = []
+        # 匹配章节标题：序章 或 第X章
+        chapter_pattern = r'^\s*(序章|第[一二三四五六七八九十百千零0-9]+章)'
+
+        for line in lines:
+            stripped_line = line.strip()
+            if re.match(chapter_pattern, stripped_line):
+                # 章节标题前后添加两行空余
+                # 如果不是第一行，在前面添加两行空行
+                if result:
+                    result.append('')  # 空行1
+                    result.append('')  # 空行2
+                # 添加章节标题（不带空格）
+                result.append(stripped_line)
+            elif stripped_line:
+                # 非空行，直接添加
+                result.append(stripped_line)
+
+        return "\n".join(result)
+
+    @staticmethod
+    def _add_paragraph_indent(text: str) -> str:
+        """为段落开头添加两个空格缩进
+
+        章节标题行不添加缩进。
         """
         lines = []
         # 匹配章节标题：序章 或 第X章
-        chapter_pattern = r'^\s*(序章|第[一二三四五六七八九十百千零0-9]+章)'
+        chapter_pattern = r'^\s*(序章|第[一二三四五六七八九十百千零0-9]+章)$'
+
         for line in text.splitlines():
-            if re.match(chapter_pattern, line):
-                lines.append('\n' + line.strip() + '\n')
+            stripped_line = line.strip()
+            if stripped_line:
+                # 检查是否为章节标题
+                if re.match(chapter_pattern, stripped_line):
+                    # 章节标题不添加缩进
+                    lines.append(stripped_line)
+                else:
+                    # 普通段落添加两个空格缩进
+                    lines.append('  ' + stripped_line)
             else:
-                lines.append(line)
+                # 空行保留
+                lines.append('')
+
         return "\n".join(lines)
 
     @staticmethod
