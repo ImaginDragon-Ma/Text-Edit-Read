@@ -297,7 +297,7 @@ class TextEditor(QMainWindow):
         text = self.text_edit.toPlainText()
 
         # 匹配章节标题：序章 或 第X章
-        chapter_pattern = r'(^\s*(序章|第[一二三四五六七八九十百千零0-9]+章)'
+        chapter_pattern = r'^\s*(序章|第[一二三四五六七八九十百千零0-9]+章)'
 
         for match in re.finditer(chapter_pattern, text, re.MULTILINE):
             position = match.start()
