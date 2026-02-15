@@ -45,7 +45,6 @@ class TextEditor(QMainWindow):
 
         self._text_content: str = ""
         self._current_file: Optional[Path] = None
-        self._saved_content: Optional[str] = None  # 保存的内容快照，用于恢复
 
         self._init_ui()
         self._init_connections()
@@ -98,23 +97,19 @@ class TextEditor(QMainWindow):
         # 编辑菜单
         edit_menu = menubar.addMenu('编辑')
         undo_action = QAction('撤销', self)
-        redo_action = QAction('恢复保存', self)  # 重做改为恢复保存
         clean_action = QAction('整理文本', self)
         find_action = QAction('查找', self)
         replace_action = QAction('替换', self)
 
         # 设置快捷键
         undo_action.setShortcut('Ctrl+Z')
-        redo_action.setShortcut('Ctrl+Y')
 
         undo_action.triggered.connect(self._undo)
-        redo_action.triggered.connect(self._redo)
         clean_action.triggered.connect(self._clean_text)
         find_action.triggered.connect(self._find_text)
         replace_action.triggered.connect(self._replace_text)
 
         edit_menu.addAction(undo_action)
-        edit_menu.addAction(redo_action)
         edit_menu.addSeparator()
         edit_menu.addAction(clean_action)
         edit_menu.addAction(find_action)
@@ -128,12 +123,6 @@ class TextEditor(QMainWindow):
     def _undo(self) -> None:
         """撤销操作"""
         self.text_edit.undo()
-
-    def _redo(self) -> None:
-        """恢复到上一次保存的内容
-
-        Ctrl+Y 功能：恢复到上一次保存的状态，而非文本编辑的重做。
-        """
         if self._saved_content is None:
             QMessageBox.information(
                 self,
@@ -200,9 +189,6 @@ class TextEditor(QMainWindow):
 
                 FileHandler.save_file(path, content)
 
-                # 保存当前内容快照（用于"重做"恢复功能）
-                self._saved_content = content
-
                 self._current_file = path
                 self.setWindowTitle(f'{APP_NAME} - {path.name}')
                 QMessageBox.information(
@@ -247,15 +233,7 @@ class TextEditor(QMainWindow):
     def _replace_text(self) -> None:
         """打开替换对话框"""
         replace_dialog = ReplaceDialog(self)
-        replace_dialog.textReplaced.connect(self._on_text_replaced)  # 连接替换完成信号
         replace_dialog.show()
-
-    def _on_text_replaced(self, new_text: str) -> None:
-        """文本替换完成回调（支持撤销）"""
-        # 使用 QTextCursor 替换文本，保留撤销功能
-        cursor = self.text_edit.textCursor()
-        cursor.select(cursor.Document)  # 选择全部内容
-        cursor.insertText(new_text)  # 插入新文本（可撤销）
 
     @property
     def text_content(self) -> str:
