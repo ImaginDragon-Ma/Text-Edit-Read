@@ -2,8 +2,9 @@
 
 定义应用程序的主窗口和核心 UI 组件。
 """
+import re
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Tuple
 
 from PyQt5.QtWidgets import (
     QMainWindow,
@@ -11,6 +12,10 @@ from PyQt5.QtWidgets import (
     QFileDialog,
     QMessageBox,
     QShortcut,
+    QListWidget,
+    QDialog,
+    QVBoxLayout,
+    QPushButton,
 )
 from PyQt5.QtGui import QFont, QIcon, QKeySequence
 from PyQt5.QtCore import Qt
@@ -45,6 +50,7 @@ class TextEditor(QMainWindow):
 
         self._text_content: str = ""
         self._current_file: Optional[Path] = None
+        self._chapter_positions: List[Tuple[int, str]] = []  # 存储章节位置和名称
 
         self._init_ui()
         self._init_connections()
@@ -63,6 +69,9 @@ class TextEditor(QMainWindow):
         # 设置默认字体
         default_font = QFont(DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE)
         self.text_edit.setFont(default_font)
+
+        # 连接文本变化信号
+        self.text_edit.textChanged.connect(self._on_text_changed)
 
         # 创建菜单栏
         self._create_menu_bar()
@@ -97,6 +106,7 @@ class TextEditor(QMainWindow):
         # 编辑菜单
         edit_menu = menubar.addMenu('编辑')
         undo_action = QAction('撤销', self)
+        toc_action = QAction('目录', self)
         clean_action = QAction('整理文本', self)
         find_action = QAction('查找', self)
         replace_action = QAction('替换', self)
@@ -105,11 +115,13 @@ class TextEditor(QMainWindow):
         undo_action.setShortcut('Ctrl+Z')
 
         undo_action.triggered.connect(self._undo)
+        toc_action.triggered.connect(self._show_toc)
         clean_action.triggered.connect(self._clean_text)
         find_action.triggered.connect(self._find_text)
         replace_action.triggered.connect(self._replace_text)
 
         edit_menu.addAction(undo_action)
+        edit_menu.addAction(toc_action)
         edit_menu.addSeparator()
         edit_menu.addAction(clean_action)
         edit_menu.addAction(find_action)
@@ -120,35 +132,21 @@ class TextEditor(QMainWindow):
         # 快捷键已在菜单项中设置，无需重复绑定
         pass
 
+    def _on_text_changed(self) -> None:
+        """文本变化时更新章节位置"""
+        # 延迟更新，避免频繁扫描
+        self._update_chapter_positions()
+
     def _undo(self) -> None:
         """撤销操作"""
         self.text_edit.undo()
-        if self._saved_content is None:
-            QMessageBox.information(
-                self,
-                '提示',
-                '没有可恢复的保存记录'
-            )
-            return
 
-        # 询问用户是否确认恢复
-        reply = QMessageBox.question(
-            self,
-            '恢复确认',
-            '是否恢复到上一次保存的内容？\n\n注意：这将覆盖当前编辑的内容。',
-            QMessageBox.Yes | QMessageBox.No
-        )
-
-        if reply == QMessageBox.Yes:
-            # 使用 QTextCursor 替换文本，保留撤销功能
-            cursor = self.text_edit.textCursor()
-            cursor.select(cursor.Document)  # 选择全部内容
-            cursor.insertText(self._saved_content)  # 插入保存的内容（可撤销）
-            QMessageBox.information(
-                self,
-                '恢复成功',
-                '已恢复到上一次保存的内容'
-            )
+    def _jump_to_position(self, position: int) -> None:
+        """跳转到指定位置"""
+        cursor = self.text_edit.textCursor()
+        cursor.setPosition(position)
+        self.text_edit.setTextCursor(cursor)
+        self.text_edit.setFocus()
 
     def _open_file(self) -> None:
         """打开文件"""
@@ -234,6 +232,77 @@ class TextEditor(QMainWindow):
         """打开替换对话框"""
         replace_dialog = ReplaceDialog(self)
         replace_dialog.show()
+
+    def _show_toc(self) -> None:
+        """显示目录对话框"""
+        # 更新章节位置
+        self._update_chapter_positions()
+
+        if not self._chapter_positions:
+            QMessageBox.information(
+                self,
+                '目录',
+                '未找到章节标题。\n\n请在文本中添加"序章"或"第X章"格式的章节标题。'
+            )
+            return
+
+        # 创建目录对话框
+        dialog = QDialog(self)
+        dialog.setWindowTitle('目录')
+        dialog.resize(400, 500)
+
+        # 章节列表
+        chapter_list = QListWidget()
+
+        for position, title in self._chapter_positions:
+            chapter_list.addItem(title)
+
+        # 跳转按钮
+        jump_button = QPushButton('跳转', dialog)
+        close_button = QPushButton('关闭', dialog)
+
+        # 布局
+        layout = QVBoxLayout()
+        layout.addWidget(chapter_list)
+        layout.addWidget(jump_button)
+        layout.addWidget(close_button)
+
+        dialog.setLayout(layout)
+
+        # 连接信号
+        jump_button.clicked.connect(
+            lambda: self._jump_to_chapter(chapter_list.currentRow())
+        )
+        close_button.clicked.connect(dialog.close)
+
+        # 双击章节项也可以跳转
+        chapter_list.itemDoubleClicked.connect(
+            lambda item: self._jump_to_chapter(chapter_list.row(item))
+        )
+
+        dialog.exec_()
+
+    def _jump_to_chapter(self, index: int) -> None:
+        """跳转到指定章节位置"""
+        if 0 <= index < len(self._chapter_positions):
+            position, _ = self._chapter_positions[index]
+            cursor = self.text_edit.textCursor()
+            cursor.setPosition(position)
+            self.text_edit.setTextCursor(cursor)
+            self.text_edit.setFocus()
+
+    def _update_chapter_positions(self) -> None:
+        """扫描文本，更新章节位置列表"""
+        self._chapter_positions.clear()
+        text = self.text_edit.toPlainText()
+
+        # 匹配章节标题：序章 或 第X章
+        chapter_pattern = r'(^\s*(序章|第[一二三四五六七八九十百千零0-9]+章)'
+
+        for match in re.finditer(chapter_pattern, text, re.MULTILINE):
+            position = match.start()
+            title = match.group().strip()
+            self._chapter_positions.append((position, title))
 
     @property
     def text_content(self) -> str:
