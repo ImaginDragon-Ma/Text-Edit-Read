@@ -16,6 +16,8 @@ from PyQt5.QtWidgets import (
     QDialog,
     QVBoxLayout,
     QPushButton,
+    QSplitter,
+    QWidget,
 )
 from PyQt5.QtGui import QFont, QIcon, QKeySequence
 from PyQt5.QtCore import Qt
@@ -62,9 +64,35 @@ class TextEditor(QMainWindow):
         self._set_window_icon()
         self.setGeometry(WINDOW_X, WINDOW_Y, WINDOW_WIDTH, WINDOW_HEIGHT)
 
+        # 创建主分割器（水平分割，左侧目录，右侧文本）
+        self.splitter = QSplitter(Qt.Horizontal, self)
+
+        # 创建左侧目录面板
+        self.toc_widget = QWidget()
+        toc_layout = QVBoxLayout()
+        toc_layout.setContentsMargins(0, 0, 0, 0)
+
+        # 目录列表
+        self.toc_list = QListWidget()
+        self.toc_list.itemDoubleClicked.connect(self._on_toc_item_clicked)
+        toc_layout.addWidget(self.toc_list)
+
+        self.toc_widget.setLayout(toc_layout)
+
         # 设置文本编辑区域
         self.text_edit = ZoomTextEdit(self)
-        self.setCentralWidget(self.text_edit)
+
+        # 将目录和文本编辑器添加到分割器
+        self.splitter.addWidget(self.toc_widget)
+        self.splitter.addWidget(self.text_edit)
+
+        # 设置分割比例（左侧200px，右侧自适应）
+        self.splitter.setStretchFactor(0, 0)
+        self.splitter.setStretchFactor(1, 1)
+        self.splitter.setSizes([200, 800])
+
+        # 将分割器设为中心控件
+        self.setCentralWidget(self.splitter)
 
         # 设置默认字体
         default_font = QFont(DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE)
@@ -136,6 +164,7 @@ class TextEditor(QMainWindow):
         """文本变化时更新章节位置"""
         # 延迟更新，避免频繁扫描
         self._update_chapter_positions()
+        self._update_toc_list()
 
     def _undo(self) -> None:
         """撤销操作"""
@@ -234,61 +263,44 @@ class TextEditor(QMainWindow):
         replace_dialog.show()
 
     def _show_toc(self) -> None:
-        """显示目录对话框"""
+        """显示/隐藏侧边栏目录"""
         # 更新章节位置
         self._update_chapter_positions()
+        self._update_toc_list()
 
+        # 如果没有章节，显示提示
         if not self._chapter_positions:
             QMessageBox.information(
                 self,
                 '目录',
                 '未找到章节标题。\n\n请在文本中添加"序章"或"第X章"格式的章节标题。'
             )
-            return
 
-        # 创建目录对话框
-        dialog = QDialog(self)
-        dialog.setWindowTitle('目录')
-        dialog.resize(400, 500)
-
-        # 章节列表
-        chapter_list = QListWidget()
-
+    def _update_toc_list(self) -> None:
+        """更新侧边栏目录列表"""
+        self.toc_list.clear()
         for position, title in self._chapter_positions:
-            chapter_list.addItem(title)
+            self.toc_list.addItem(title)
 
-        # 跳转按钮
-        jump_button = QPushButton('跳转', dialog)
-        close_button = QPushButton('关闭', dialog)
-
-        # 布局
-        layout = QVBoxLayout()
-        layout.addWidget(chapter_list)
-        layout.addWidget(jump_button)
-        layout.addWidget(close_button)
-
-        dialog.setLayout(layout)
-
-        # 连接信号
-        jump_button.clicked.connect(
-            lambda: self._jump_to_chapter(chapter_list.currentRow())
-        )
-        close_button.clicked.connect(dialog.close)
-
-        # 双击章节项也可以跳转
-        chapter_list.itemDoubleClicked.connect(
-            lambda item: self._jump_to_chapter(chapter_list.row(item))
-        )
-
-        dialog.exec_()
+    def _on_toc_item_clicked(self, item) -> None:
+        """目录项被点击时跳转到对应位置"""
+        index = self.toc_list.row(item)
+        self._jump_to_chapter(index)
 
     def _jump_to_chapter(self, index: int) -> None:
-        """跳转到指定章节位置"""
+        """跳转到指定章节位置（显示在文本顶部）"""
         if 0 <= index < len(self._chapter_positions):
             position, _ = self._chapter_positions[index]
             cursor = self.text_edit.textCursor()
             cursor.setPosition(position)
             self.text_edit.setTextCursor(cursor)
+
+            # 获取当前光标矩形位置
+            cursor_rect = self.text_edit.cursorRect(cursor)
+            # 计算需要滚动的距离，使章节显示在顶部
+            scrollbar = self.text_edit.verticalScrollBar()
+            scrollbar.setValue(scrollbar.value() + cursor_rect.top())
+
             self.text_edit.setFocus()
 
     def _update_chapter_positions(self) -> None:
