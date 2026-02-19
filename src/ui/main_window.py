@@ -205,36 +205,33 @@ class TextEditor(QMainWindow):
                 )
 
     def _save_file(self) -> None:
-        """保存文件"""
-        file_path, _ = QFileDialog.getSaveFileName(self, '保存文件')
-        if file_path:
-            try:
-                from src.core.file_handler import FileHandler
+        """保存文件到原位置"""
+        # 检查是否有打开的文件
+        if self._current_file is None:
+            QMessageBox.warning(
+                self,
+                '无法保存',
+                '未打开任何文件，无法保存。\n\n请先使用"文件 > 打开"打开一个文件。'
+            )
+            return
 
-                path = Path(file_path)
-                content = self.text_edit.toPlainText()
+        try:
+            from src.core.file_handler import FileHandler
 
-                FileHandler.save_file(path, content)
-
-                self._current_file = path
-                self.setWindowTitle(f'{APP_NAME} - {path.name}')
-                QMessageBox.information(
-                    self,
-                    '保存成功',
-                    f'文件已保存到：{path.name}'
-                )
-            except FileOperationError as e:
-                QMessageBox.critical(
-                    self,
-                    '保存失败',
-                    str(e)
-                )
-            except Exception as e:
-                QMessageBox.critical(
-                    self,
-                    '错误',
-                    f'保存文件时发生未知错误：{e}'
-                )
+            content = self.text_edit.toPlainText()
+            FileHandler.save_file(self._current_file, content)
+        except FileOperationError as e:
+            QMessageBox.critical(
+                self,
+                '保存失败',
+                str(e)
+            )
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                '错误',
+                f'保存文件时发生未知错误：{e}'
+            )
 
     def _clean_text(self) -> None:
         """整理文本（支持撤销）"""
