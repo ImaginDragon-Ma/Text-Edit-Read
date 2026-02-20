@@ -18,9 +18,12 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QSplitter,
     QWidget,
+    QStatusBar,
+    QLabel,
+    QTabBar,
 )
 from PyQt5.QtGui import QFont, QIcon, QKeySequence
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 
 from src.utils.config import (
     APP_ICON_NAME,
@@ -50,9 +53,21 @@ class TextEditor(QMainWindow):
         """初始化主窗口"""
         super().__init__()
 
+        # 多文件支持
+        self._open_files: List[dict] = []  # 存储打开的文件信息 {path, content}
+        self._current_file_index: int = -1  # 当前激活的文件索引
+
+        # 章节位置列表 [(position, title), ...]
+        self._chapter_positions: List[Tuple[int, str]] = []
+        self._current_chapter_index: int = 0  # 当前章节索引
+
+        # 兼容旧代码
         self._text_content: str = ""
         self._current_file: Optional[Path] = None
-        self._chapter_positions: List[Tuple[int, str]] = []  # 存储章节位置和名称
+
+        # 创建提示信息清除计时器
+        self._message_timer = QTimer(self)
+        self._message_timer.timeout.connect(self._clear_message)
 
         self._init_ui()
         self._init_connections()
@@ -63,6 +78,16 @@ class TextEditor(QMainWindow):
         self.setWindowTitle(APP_NAME)
         self._set_window_icon()
         self.setGeometry(WINDOW_X, WINDOW_Y, WINDOW_WIDTH, WINDOW_HEIGHT)
+
+        # 创建顶部标签栏（用于显示多个打开的文件）
+        self.file_tab_bar = QTabBar(self)
+        self.file_tab_bar.setExpanding(False)
+        self.file_tab_bar.setDocumentMode(True)
+        self.file_tab_bar.setMovable(True)
+        self.file_tab_bar.setTabsClosable(True)
+        self.file_tab_bar.tabCloseRequested.connect(self._on_tab_close_requested)
+        self.file_tab_bar.currentChanged.connect(self._on_tab_changed)
+        self.file_tab_bar.show()
 
         # 创建主分割器（水平分割，左侧目录，右侧文本）
         self.splitter = QSplitter(Qt.Horizontal, self)
@@ -91,8 +116,17 @@ class TextEditor(QMainWindow):
         self.splitter.setStretchFactor(1, 1)
         self.splitter.setSizes([200, 800])
 
-        # 将分割器设为中心控件
-        self.setCentralWidget(self.splitter)
+        # 创建主容器（垂直布局：标签栏 + 分割器）
+        main_widget = QWidget()
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        main_layout.addWidget(self.file_tab_bar)
+        main_layout.addWidget(self.splitter)
+        main_widget.setLayout(main_layout)
+
+        # 将主容器设为中心控件
+        self.setCentralWidget(main_widget)
 
         # 设置默认字体
         default_font = QFont(DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE)
@@ -100,6 +134,11 @@ class TextEditor(QMainWindow):
 
         # 连接文本变化信号
         self.text_edit.textChanged.connect(self._on_text_changed)
+        self.text_edit.cursorPositionChanged.connect(self._on_cursor_position_changed)
+        self.text_edit.selectionChanged.connect(self._on_selection_changed)
+
+        # 创建状态栏
+        self._create_status_bar()
 
         # 创建菜单栏
         self._create_menu_bar()
@@ -121,15 +160,19 @@ class TextEditor(QMainWindow):
         file_menu = menubar.addMenu('文件')
         open_action = QAction('打开', self)
         save_action = QAction('保存', self)
+        save_as_action = QAction('另存为', self)
 
         # 设置快捷键
         save_action.setShortcut('Ctrl+S')
+        save_as_action.setShortcut('Ctrl+Shift+S')
 
         open_action.triggered.connect(self._open_file)
         save_action.triggered.connect(self._save_file)
+        save_as_action.triggered.connect(self._save_file_as)
 
         file_menu.addAction(open_action)
         file_menu.addAction(save_action)
+        file_menu.addAction(save_as_action)
 
         # 编辑菜单
         edit_menu = menubar.addMenu('编辑')
@@ -160,15 +203,116 @@ class TextEditor(QMainWindow):
         # 快捷键已在菜单项中设置，无需重复绑定
         pass
 
+    def _create_status_bar(self) -> None:
+        """创建状态栏"""
+        self.status_bar = QStatusBar(self)
+        self.setStatusBar(self.status_bar)
+
+        # 章节信息标签
+        self.chapter_label = QLabel('章节: 0/0', self)
+        self.status_bar.addWidget(self.chapter_label)
+
+        # 添加分隔符
+        self.status_bar.addPermanentWidget(QLabel('|', self))
+
+        # 提示信息标签
+        self.message_label = QLabel('', self)
+        self.message_label.setStyleSheet("color: green;")
+        self.status_bar.addPermanentWidget(self.message_label)
+
+        # 添加分隔符
+        self.status_bar.addPermanentWidget(QLabel('|', self))
+
+        # 选中文字数信息标签
+        self.selection_count_label = QLabel('选中: 0字', self)
+        self.status_bar.addPermanentWidget(self.selection_count_label)
+
+        # 添加分隔符
+        self.status_bar.addPermanentWidget(QLabel('|', self))
+
+        # 字数信息标签
+        self.word_count_label = QLabel('字数: 0/0', self)
+        self.status_bar.addPermanentWidget(self.word_count_label)
+
+        # 初始化状态
+        self._update_status_bar()
+
+    def _on_cursor_position_changed(self) -> None:
+        """光标位置变化时更新当前章节"""
+        if not self._chapter_positions:
+            return
+
+        cursor_position = self.text_edit.textCursor().position()
+        current_index = 0
+
+        # 找到当前光标所在章节
+        for i, (position, _) in enumerate(self._chapter_positions):
+            if position <= cursor_position:
+                current_index = i
+            else:
+                break
+
+        self._current_chapter_index = current_index
+        self._update_status_bar()
+
+    def _update_status_bar(self) -> None:
+        """更新状态栏信息"""
+        # 更新章节信息
+        total_chapters = len(self._chapter_positions)
+        current_chapter = self._current_chapter_index + 1 if total_chapters > 0 else 0
+        self.chapter_label.setText(f'章节: {current_chapter}/{total_chapters}')
+
+        # 更新字数信息
+        text = self.text_edit.toPlainText()
+        total_words = len(text)
+
+        # 计算当前章节字数
+        if total_chapters > 0 and self._current_chapter_index < total_chapters:
+            start_pos = self._chapter_positions[self._current_chapter_index][0]
+            # 计算当前章节的结束位置（下一章开始位置或文本结尾）
+            if self._current_chapter_index < total_chapters - 1:
+                end_pos = self._chapter_positions[self._current_chapter_index + 1][0]
+            else:
+                end_pos = len(text)
+            chapter_words = len(text[start_pos:end_pos])
+        else:
+            chapter_words = 0
+
+        self.word_count_label.setText(f'字数: {chapter_words}/{total_words}')
+
+    def _show_message(self, message: str) -> None:
+        """在状态栏显示提示信息（3秒后消失）"""
+        self.message_label.setText(message)
+        # 停止之前的计时器（如果有）
+        self._message_timer.stop()
+        # 3秒后清除提示
+        self._message_timer.start(3000)
+
+    def _clear_message(self) -> None:
+        """清除状态栏提示信息"""
+        self.message_label.setText('')
+        self._message_timer.stop()
+
     def _on_text_changed(self) -> None:
         """文本变化时更新章节位置"""
         # 延迟更新，避免频繁扫描
         self._update_chapter_positions()
         self._update_toc_list()
+        self._update_status_bar()
 
     def _undo(self) -> None:
         """撤销操作"""
-        self.text_edit.undo()
+        if self.text_edit.document().isUndoAvailable():
+            self.text_edit.undo()
+            self._show_message('撤销成功')
+        else:
+            self._show_message('没有可撤销的操作')
+
+    def _on_selection_changed(self) -> None:
+        """选中文本变化时更新选中文字数"""
+        selected_text = self.text_edit.textCursor().selectedText()
+        selected_count = len(selected_text)
+        self.selection_count_label.setText(f'选中: {selected_count}字')
 
     def _jump_to_position(self, position: int) -> None:
         """跳转到指定位置"""
@@ -180,6 +324,7 @@ class TextEditor(QMainWindow):
     def _open_file(self) -> None:
         """打开文件"""
         file_path, _ = QFileDialog.getOpenFileName(self, '打开文件')
+
         if file_path:
             try:
                 from src.core.file_handler import FileHandler
@@ -187,10 +332,29 @@ class TextEditor(QMainWindow):
                 path = Path(file_path)
                 content = FileHandler.read_file(path)
 
-                self._text_content = content
-                self._current_file = path
-                self.text_edit.setText(content)
-                self.setWindowTitle(f'{APP_NAME} - {path.name}')
+                # 检查文件是否已打开
+                for i, file_info in enumerate(self._open_files):
+                    if file_info['path'] == path:
+                        # 文件已打开，切换到该标签
+                        self.file_tab_bar.setCurrentIndex(i)
+                        self._show_message(f'文件已打开：{path.name}')
+                        return
+
+                # 保存当前文件内容
+                if self._current_file_index >= 0:
+                    self._save_current_file_content()
+
+                # 添加新文件到列表
+                self._open_files.append({'path': path, 'content': content})
+
+                # 添加标签
+                self.file_tab_bar.addTab(path.name)
+
+                # 切换到新标签
+                new_index = len(self._open_files) - 1
+                self.file_tab_bar.setCurrentIndex(new_index)
+
+                self._show_message(f'文件已打开：{path.name}')
             except FileOperationError as e:
                 QMessageBox.critical(
                     self,
@@ -204,22 +368,91 @@ class TextEditor(QMainWindow):
                     f'打开文件时发生未知错误：{e}'
                 )
 
+    def _save_current_file_content(self) -> None:
+        """保存当前文件内容到内存"""
+        if 0 <= self._current_file_index < len(self._open_files):
+            self._open_files[self._current_file_index]['content'] = self.text_edit.toPlainText()
+
+    def _on_tab_changed(self, index: int) -> None:
+        """标签切换事件"""
+        if index < 0:
+            return
+
+        # 保存当前文件内容
+        self._save_current_file_content()
+
+        # 切换到新文件
+        self._current_file_index = index
+        file_info = self._open_files[index]
+
+        # 兼容旧代码
+        self._text_content = file_info['content']
+        self._current_file = file_info['path']
+
+        # 更新文本编辑器
+        self.text_edit.setPlainText(file_info['content'])
+        self.setWindowTitle(f'{APP_NAME} - {file_info["path"].name}')
+
+        # 更新章节和状态
+        self._update_chapter_positions()
+        self._update_toc_list()
+        self._update_status_bar()
+
+    def _on_tab_close_requested(self, index: int) -> None:
+        """标签关闭请求"""
+        if index < 0 or index >= len(self._open_files):
+            return
+
+        # 移除文件信息
+        removed_file = self._open_files.pop(index)
+
+        # 移除标签
+        self.file_tab_bar.removeTab(index)
+
+        # 如果关闭的是当前标签，切换到另一个标签
+        if index == self._current_file_index:
+            if self._open_files:
+                self._current_file_index = max(0, index - 1)
+                file_info = self._open_files[self._current_file_index]
+                self._text_content = file_info['content']
+                self._current_file = file_info['path']
+                self.text_edit.setPlainText(file_info['content'])
+                self.setWindowTitle(f'{APP_NAME} - {file_info["path"].name}')
+                self._update_chapter_positions()
+                self._update_toc_list()
+                self._update_status_bar()
+            else:
+                # 没有文件了
+                self._current_file_index = -1
+                self._text_content = ""
+                self._current_file = None
+                self._text_edit.setPlainText("")
+                self.setWindowTitle(APP_NAME)
+        else:
+            # 关闭的不是当前标签，调整索引
+            if index < self._current_file_index:
+                self._current_file_index -= 1
+
     def _save_file(self) -> None:
-        """保存文件到原位置"""
+        """保存文件到原位置（Ctrl+S）"""
         # 检查是否有打开的文件
-        if self._current_file is None:
-            QMessageBox.warning(
-                self,
-                '无法保存',
-                '未打开任何文件，无法保存。\n\n请先使用"文件 > 打开"打开一个文件。'
-            )
+        if self._current_file_index < 0:
+            self._show_message('未打开任何文件，无法保存')
             return
 
         try:
             from src.core.file_handler import FileHandler
 
-            content = self.text_edit.toPlainText()
-            FileHandler.save_file(self._current_file, content)
+            # 保存当前文件内容到内存
+            self._save_current_file_content()
+
+            # 获取当前文件信息
+            file_info = self._open_files[self._current_file_index]
+            content = file_info['content']
+            path = file_info['path']
+
+            FileHandler.save_file(path, content)
+            self._show_message('保存成功')
         except FileOperationError as e:
             QMessageBox.critical(
                 self,
@@ -232,6 +465,30 @@ class TextEditor(QMainWindow):
                 '错误',
                 f'保存文件时发生未知错误：{e}'
             )
+
+    def _save_file_as(self) -> None:
+        """另存为（Ctrl+Shift+S）"""
+        file_path, _ = QFileDialog.getSaveFileName(self, '另存为')
+        if file_path:
+            try:
+                from src.core.file_handler import FileHandler
+
+                path = Path(file_path)
+                content = self.text_edit.toPlainText()
+                FileHandler.save_file(path, content)
+                self._show_message(f'文件已成功保存到：{path.name}')
+            except FileOperationError as e:
+                QMessageBox.critical(
+                    self,
+                    '保存失败',
+                    str(e)
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    '错误',
+                    f'保存文件时发生未知错误：{e}'
+                )
 
     def _clean_text(self) -> None:
         """整理文本（支持撤销）"""
@@ -287,6 +544,7 @@ class TextEditor(QMainWindow):
     def _jump_to_chapter(self, index: int) -> None:
         """跳转到指定章节位置（显示在文本顶部）"""
         if 0 <= index < len(self._chapter_positions):
+            self._current_chapter_index = index
             position, _ = self._chapter_positions[index]
             cursor = self.text_edit.textCursor()
             cursor.setPosition(position)
@@ -299,6 +557,9 @@ class TextEditor(QMainWindow):
             scrollbar.setValue(scrollbar.value() + cursor_rect.top())
 
             self.text_edit.setFocus()
+
+            # 更新状态栏
+            self._update_status_bar()
 
     def _update_chapter_positions(self) -> None:
         """扫描文本，更新章节位置列表"""
