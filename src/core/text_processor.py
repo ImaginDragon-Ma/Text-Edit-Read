@@ -81,17 +81,21 @@ class TextProcessor:
         """
         lines = text.splitlines()
         result = []
-        # 匹配章节标题：序章 或 第X章
+        # 匹配章节标题：序章 或 第X章（后面可以有任意内容）
         chapter_pattern = r'^\s*(序章|第[一二三四五六七八九十百千零0-9]+章)'
 
         for line in lines:
-            stripped_line = line.strip()
-            if re.match(chapter_pattern, stripped_line):
-                # 添加章节标题（定格写，不带空格缩进）
-                result.append(stripped_line)
-            elif stripped_line:
+            # 检查是否为章节标题
+            match = re.match(chapter_pattern, line)
+            if match:
+                # 整行作为章节标题（定格写，不带空格缩进）
+                result.append(line.strip())
+            elif line.strip():
                 # 非空行，直接添加
-                result.append(stripped_line)
+                result.append(line.strip())
+            elif line == '':
+                # 保留空行
+                result.append('')
 
         return "\n".join(result)
 
@@ -99,11 +103,11 @@ class TextProcessor:
     def _add_paragraph_indent(text: str) -> str:
         """为段落开头添加两个中文空格缩进
 
-        章节标题行不添加缩进。
+        章节标题行不添加缩进（包括第一章　紫檀御座这种格式）。
         """
         lines = []
-        # 匹配章节标题：序章 或 第X章
-        chapter_pattern = r'^\s*(序章|第[一二三四五六七八九十百千零0-9]+章)$'
+        # 匹配章节标题：序章 或 第X章（后面可以有任意内容）
+        chapter_pattern = r'^\s*(序章|第[一二三四五六七八九十百千零0-9]+章)'
         # 中文全角空格
         chinese_space = '　'
 

@@ -435,9 +435,9 @@ class TextEditor(QMainWindow):
 
     def _save_file(self) -> None:
         """保存文件到原位置（Ctrl+S）"""
-        # 检查是否有打开的文件
+        # 检查是否有打开的文件，如果没有则执行另存为
         if self._current_file_index < 0:
-            self._show_message('未打开任何文件，无法保存')
+            self._save_file_as()
             return
 
         try:
@@ -477,6 +477,29 @@ class TextEditor(QMainWindow):
                 content = self.text_edit.toPlainText()
                 FileHandler.save_file(path, content)
                 self._show_message(f'文件已成功保存到：{path.name}')
+
+                # 检查文件是否已在打开列表中
+                found = False
+                for i, file_info in enumerate(self._open_files):
+                    if file_info['path'] == path:
+                        # 文件已打开，切换到该标签
+                        self._open_files[i]['content'] = content
+                        self.file_tab_bar.setCurrentIndex(i)
+                        found = True
+                        break
+
+                if not found:
+                    # 添加新文件到列表
+                    self._open_files.append({'path': path, 'content': content})
+                    # 添加标签
+                    self.file_tab_bar.addTab(path.name)
+                    # 切换到新标签
+                    new_index = len(self._open_files) - 1
+                    self.file_tab_bar.setCurrentIndex(new_index)
+
+                # 更新窗口标题
+                self.setWindowTitle(f'{APP_NAME} - {path.name}')
+
             except FileOperationError as e:
                 QMessageBox.critical(
                     self,
