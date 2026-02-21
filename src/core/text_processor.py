@@ -21,7 +21,7 @@ class TextProcessor:
         执行以下操作：
         - 删除开头空格
         - 删除空白段落
-        - 分离章节标题为独立段落，章节间保留两行空余
+        - 分离章节标题为独立段落，章节间保留空行
         - 为段落开头添加两个中文空格缩进
 
         注意：如果文本中没有章节标题（序章或第X章），则视为单章节小说，不添加章节标题。
@@ -37,6 +37,7 @@ class TextProcessor:
             text = TextProcessor._remove_empty_paragraphs(text)
             text = TextProcessor._insert_first_chapter(text)
             text = TextProcessor._separate_chapter_titles(text)
+            text = TextProcessor._add_chapter_spacing(text)
             text = TextProcessor._add_paragraph_indent(text)
             return text
         except Exception as e:
@@ -90,6 +91,39 @@ class TextProcessor:
             if match:
                 # 整行作为章节标题（定格写，不带空格缩进）
                 result.append(line.strip())
+            elif line.strip():
+                # 非空行，直接添加
+                result.append(line.strip())
+            elif line == '':
+                # 保留空行
+                result.append('')
+
+        return "\n".join(result)
+
+    @staticmethod
+    def _add_chapter_spacing(text: str) -> str:
+        """在章节标题前后添加空行
+
+        支持的章节标题格式：
+        - 序章
+        - 第X章（如：第一章、第二章等）
+        """
+        lines = text.splitlines()
+        result = []
+        # 匹配章节标题：序章 或 第X章（后面可以有任意内容）
+        chapter_pattern = r'^\s*(序章|第[一二三四五六七八九十百千零0-9]+章)'
+
+        for i, line in enumerate(lines):
+            # 检查是否为章节标题
+            if re.match(chapter_pattern, line):
+                # 在章节标题前添加空行（如果不是第一行）
+                if result and result[-1] != '':
+                    result.append('')
+                # 添加章节标题
+                result.append(line.strip())
+                # 在章节标题后添加空行（如果不是最后一行）
+                if i < len(lines) - 1 and lines[i + 1].strip():
+                    result.append('')
             elif line.strip():
                 # 非空行，直接添加
                 result.append(line.strip())
