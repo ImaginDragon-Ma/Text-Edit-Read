@@ -99,7 +99,10 @@ class TextEditor(QMainWindow):
 
         # 目录列表
         self.toc_list = QListWidget()
+        # 设置为可编辑模式
+        self.toc_list.setEditTriggers(QListWidget.DoubleClicked | QListWidget.EditKeyPressed)
         self.toc_list.itemDoubleClicked.connect(self._on_toc_item_clicked)
+        self.toc_list.itemChanged.connect(self._on_toc_item_changed)
         toc_layout.addWidget(self.toc_list)
 
         self.toc_widget.setLayout(toc_layout)
@@ -563,6 +566,23 @@ class TextEditor(QMainWindow):
         """目录项被点击时跳转到对应位置"""
         index = self.toc_list.row(item)
         self._jump_to_chapter(index)
+
+    def _on_toc_item_changed(self, item) -> None:
+        """目录项被编辑时同步到文本编辑器"""
+        index = self.toc_list.row(item)
+        if 0 <= index < len(self._chapter_positions):
+            # 获取编辑后的标题
+            new_title = item.text()
+            # 获取原章节位置和标题
+            position, old_title = self._chapter_positions[index]
+            # 更新章节标题
+            self._chapter_positions[index] = (position, new_title)
+            # 同步到文本编辑器
+            text = self.text_edit.toPlainText()
+            # 替换文本中的章节标题
+            text = text[:position] + new_title + text[position + len(old_title):]
+            self.text_edit.setPlainText(text)
+            self._show_message('目录已更新')
 
     def _jump_to_chapter(self, index: int) -> None:
         """跳转到指定章节位置（显示在文本顶部）"""
