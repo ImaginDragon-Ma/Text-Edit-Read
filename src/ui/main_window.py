@@ -180,7 +180,6 @@ class TextEditor(QMainWindow):
         # 编辑菜单
         edit_menu = menubar.addMenu('编辑')
         undo_action = QAction('撤销', self)
-        toc_action = QAction('目录', self)
         clean_action = QAction('整理文本', self)
         find_action = QAction('查找', self)
         replace_action = QAction('替换', self)
@@ -189,17 +188,23 @@ class TextEditor(QMainWindow):
         undo_action.setShortcut('Ctrl+Z')
 
         undo_action.triggered.connect(self._undo)
-        toc_action.triggered.connect(self._show_toc)
         clean_action.triggered.connect(self._clean_text)
         find_action.triggered.connect(self._find_text)
         replace_action.triggered.connect(self._replace_text)
 
         edit_menu.addAction(undo_action)
-        edit_menu.addAction(toc_action)
         edit_menu.addSeparator()
         edit_menu.addAction(clean_action)
         edit_menu.addAction(find_action)
         edit_menu.addAction(replace_action)
+
+        # 视图菜单
+        view_menu = menubar.addMenu('视图')
+        toc_action = QAction('目录', self)
+
+        toc_action.triggered.connect(self._show_toc)
+
+        view_menu.addAction(toc_action)
 
     def _init_connections(self) -> None:
         """初始化信号连接和快捷键"""
