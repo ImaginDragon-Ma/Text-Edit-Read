@@ -3,7 +3,7 @@
 提供文本清理、查找、替换等核心功能。
 """
 import re
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Match
 
 from src.utils.exceptions import TextProcessingError
 
@@ -202,7 +202,7 @@ class TextProcessor:
             raise TextProcessingError(f"文本查找失败: {e}") from e
 
     @staticmethod
-    def replace_all_word(lines: List[str], old_word: str, new_word: str) -> List[str]:
+    def replace_all_word(lines: List[str], old_word: str, new_word: str) -> Tuple[List[str], int]:
         """替换所有行中的指定单词
 
         Args:
@@ -211,10 +211,16 @@ class TextProcessor:
             new_word: 新词
 
         Returns:
-            替换后的行列表
+            元组 (替换后的行列表, 替换数量)
         """
         try:
-            return [line.replace(old_word, new_word) for line in lines]
+            result = []
+            count = 0
+            for line in lines:
+                new_line = line.replace(old_word, new_word)
+                count += line.count(old_word)
+                result.append(new_line)
+            return result, count
         except Exception as e:
             raise TextProcessingError(f"全部替换失败: {e}") from e
 
@@ -232,20 +238,25 @@ class TextProcessor:
             new_word: 新词
 
         Returns:
-            替换后的行列表
+            元组 (替换后的行列表, 替换数量)
         """
         try:
+            count = 0
+
             def replace_line(line: str) -> str:
-                def replace_match(match: re.Match) -> str:
+                def replace_match(match: Match) -> str:
+                    nonlocal count
                     text = match.group(0)
                     # 检查是否为中英文双引号包裹的内容
                     if (
-                        text.startswith('“') and text.endswith('”')
+                        text.startswith('”') and text.endswith('”')
                     ) or (
-                        text.startswith('"') and text.endswith('"')
+                        text.startswith('”') and text.endswith('”')
                     ):
                         return text
-                    return text.replace(old_word, new_word)
+                    replaced = text.replace(old_word, new_word)
+                    count += text.count(old_word)
+                    return replaced
 
                 # 匹配中英文双引号内的内容或非引号内容
                 return re.sub(
@@ -254,6 +265,7 @@ class TextProcessor:
                     line
                 )
 
-            return [replace_line(line) for line in lines]
+            result = [replace_line(line) for line in lines]
+            return result, count
         except Exception as e:
             raise TextProcessingError(f"双引号外替换失败: {e}") from e

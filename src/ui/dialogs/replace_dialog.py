@@ -95,14 +95,14 @@ class ReplaceDialog(QDialog):
         try:
             if replace_all:
                 # 全部替换
-                new_text_content = TextProcessor.replace_all_word(
+                new_text_content, count = TextProcessor.replace_all_word(
                     lines,
                     old_text,
                     new_text
                 )
             else:
                 # 双引号外替换
-                new_text_content = TextProcessor.replace_except_in_quotes(
+                new_text_content, count = TextProcessor.replace_except_in_quotes(
                     lines,
                     old_text,
                     new_text
@@ -111,6 +111,17 @@ class ReplaceDialog(QDialog):
             # 设置新文本（不使用 setText，避免覆盖撤销堆栈）
             self._parent.text_edit.setText("\n".join(new_text_content))
             self._parent.text_edit.setFocus()
+
+            # 显示替换结果
+            if count > 0:
+                self._parent._show_message(f'已替换 {count} 处内容')
+            else:
+                from PyQt5.QtWidgets import QMessageBox
+                QMessageBox.information(
+                    self,
+                    '替换结果',
+                    f'未找到要替换的内容：{old_text}'
+                )
         except Exception as e:
             # 替换失败时的处理
             from PyQt5.QtWidgets import QMessageBox
