@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
     QListWidget,
     QDialog,
     QVBoxLayout,
+    QHBoxLayout,
     QPushButton,
     QSplitter,
     QWidget,
@@ -65,6 +66,10 @@ class TextEditor(QMainWindow):
         self._text_content: str = ""
         self._current_file: Optional[Path] = None
 
+        # 目录折叠状态
+        self._is_catalog_collapsed: bool = False
+        self._catalog_collapsed_width: int = 25
+
         # 创建提示信息清除计时器
         self._message_timer = QTimer(self)
         self._message_timer.timeout.connect(self._clear_message)
@@ -92,18 +97,35 @@ class TextEditor(QMainWindow):
         # 创建主分割器（水平分割，左侧目录，右侧文本）
         self.splitter = QSplitter(Qt.Horizontal, self)
 
-        # 创建左侧目录面板
+        # 创建目录折叠按钮
+        self.collapse_button = QPushButton("◀", self)
+        self.collapse_button.setFixedSize(25, self.height())
+        self.collapse_button.setFlat(True)  # 设置为扁平样式
+        self.collapse_button.clicked.connect(self._toggle_catalog)
+
+        # 创建左侧目录面板容器（使用水平布局包裹折叠按钮和目录）
         self.toc_widget = QWidget()
-        toc_layout = QVBoxLayout()
+        toc_layout = QHBoxLayout()
         toc_layout.setContentsMargins(0, 0, 0, 0)
+        toc_layout.setSpacing(0)
+
+        # 添加折叠按钮
+        toc_layout.addWidget(self.collapse_button)
+
+        # 创建目录列表容器（用于显隐控制）
+        self.toc_list_widget = QWidget()
+        toc_list_layout = QVBoxLayout()
+        toc_list_layout.setContentsMargins(0, 0, 0, 0)
 
         # 目录列表
         self.toc_list = QListWidget()
-        # 设置为可编辑模式
         self.toc_list.setEditTriggers(QListWidget.DoubleClicked | QListWidget.EditKeyPressed)
         self.toc_list.itemDoubleClicked.connect(self._on_toc_item_clicked)
         self.toc_list.itemChanged.connect(self._on_toc_item_changed)
-        toc_layout.addWidget(self.toc_list)
+        toc_list_layout.addWidget(self.toc_list)
+
+        self.toc_list_widget.setLayout(toc_list_layout)
+        toc_layout.addWidget(self.toc_list_widget)
 
         self.toc_widget.setLayout(toc_layout)
 
@@ -560,6 +582,26 @@ class TextEditor(QMainWindow):
                 '目录',
                 '未找到章节标题。\n\n请在文本中添加"序章"或"第X章"格式的章节标题。'
             )
+
+    def _toggle_catalog(self) -> None:
+        """切换目录折叠/展开状态"""
+        self._is_catalog_collapsed = not self._is_catalog_collapsed
+
+        if self._is_catalog_collapsed:
+            # 折叠状态
+            self.collapse_button.setText("▶")
+            self.toc_list_widget.setVisible(False)
+            # 调整分割器尺寸，使折叠区域仅保留按钮宽度
+            self.splitter.setSizes([
+                self._catalog_collapsed_width,
+                self.splitter.width() - self._catalog_collapsed_width
+            ])
+        else:
+            # 展开状态
+            self.collapse_button.setText("◀")
+            self.toc_list_widget.setVisible(True)
+            # 恢复分割器尺寸（目录200px，文本自适应）
+            self.splitter.setSizes([200, self.splitter.width() - 200])
 
     def _update_toc_list(self) -> None:
         """更新侧边栏目录列表"""
