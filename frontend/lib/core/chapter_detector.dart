@@ -3,7 +3,7 @@
 /// 从文本中检测章节标题并生成章节列表。
 /// 对应 Python 版 ui/main_window.py 中的章节检测逻辑。
 
-import '../models/chapter.dart';
+import 'models/chapter.dart';
 
 class ChapterDetector {
   /// 章节标题正则：序章 或 第X章

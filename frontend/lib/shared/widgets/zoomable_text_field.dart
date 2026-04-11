@@ -7,8 +7,8 @@ class ZoomableTextField extends StatefulWidget {
   final double fontSize;
   final ValueChanged<double> onFontSizeChanged;
   final ValueChanged<int> onCursorPositionChanged;
-  final ValueChanged<int> onSelectionStartChanged;
-  final ValueChanged<int> onSelectionEndChanged;
+  final ValueChanged<int>? onSelectionStartChanged;
+  final ValueChanged<int>? onSelectionEndChanged;
 
   const ZoomableTextField({
     super.key,
@@ -17,8 +17,8 @@ class ZoomableTextField extends StatefulWidget {
     required this.fontSize,
     required this.onFontSizeChanged,
     required this.onCursorPositionChanged,
-    required this.onSelectionStartChanged,
-    required this.onSelectionEndChanged,
+    this.onSelectionStartChanged,
+    this.onSelectionEndChanged,
   });
 
   @override
@@ -30,43 +30,30 @@ class _ZoomableTextFieldState extends State<ZoomableTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return Listener(
-      onPointerSignal: (event) {
-        if (event is PointerScrollEvent && HardwareKeyboard.instance.isControlPressed) {
-          final delta = event.scrollDelta.dy;
-          final newSize = widget.fontSize - delta * 0.02;
+    return GestureDetector(
+      onScaleStart: (_) => _baseScaleFactor = 1.0,
+      onScaleUpdate: (details) {
+        if (details.pointerCount >= 2) {
+          final scale = details.scale / _baseScaleFactor;
+          _baseScaleFactor = details.scale;
+          final newSize = widget.fontSize * scale;
           widget.onFontSizeChanged(newSize.clamp(12.0, 72.0));
         }
       },
-      child: GestureDetector(
-        onScaleStart: (_) => _baseScaleFactor = 1.0,
-        onScaleUpdate: (details) {
-          if (details.pointerCount >= 2) {
-            final scale = details.scale / _baseScaleFactor;
-            _baseScaleFactor = details.scale;
-            final newSize = widget.fontSize * scale;
-            widget.onFontSizeChanged(newSize.clamp(12.0, 72.0));
-          }
-        },
-        child: TextField(
-          controller: widget.controller,
-          focusNode: widget.focusNode,
-          style: TextStyle(fontSize: widget.fontSize),
-          maxLines: null,
-          expands: true,
-          textAlignVertical: TextAlignVertical.top,
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            hintText: '打开文件开始编辑...',
-            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-          onChanged: (_) => _notifyCursor(),
-          onTap: _notifyCursor,
-          onKey: (_, __) {
-            // Defer to next frame so selection updates
-            WidgetsBinding.instance.addPostFrameCallback((_) => _notifyCursor());
-          },
+      child: TextField(
+        controller: widget.controller,
+        focusNode: widget.focusNode,
+        style: TextStyle(fontSize: widget.fontSize),
+        maxLines: null,
+        expands: true,
+        textAlignVertical: TextAlignVertical.top,
+        decoration: const InputDecoration(
+          border: InputBorder.none,
+          hintText: '打开文件开始编辑...',
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
+        onChanged: (_) => _notifyCursor(),
+        onTap: _notifyCursor,
       ),
     );
   }
@@ -75,8 +62,8 @@ class _ZoomableTextFieldState extends State<ZoomableTextField> {
     final sel = widget.controller.selection;
     if (sel.isValid) {
       widget.onCursorPositionChanged(sel.baseOffset);
-      widget.onSelectionStartChanged(sel.start);
-      widget.onSelectionEndChanged(sel.end);
+      widget.onSelectionStartChanged?.call(sel.start);
+      widget.onSelectionEndChanged?.call(sel.end);
     }
   }
 }

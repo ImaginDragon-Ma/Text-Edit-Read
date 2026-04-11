@@ -1,7 +1,5 @@
 part of 'chapter_nav_bloc.dart';
 
-import '../../../core/models/chapter.dart';
-
 class ChapterNavState extends Equatable {
   final List<Chapter> chapters;
   final int currentChapterIndex;

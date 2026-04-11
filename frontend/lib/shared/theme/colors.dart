@@ -1,35 +1,47 @@
 import 'package:flutter/material.dart';
 
+/// 暖色调主题色板 — 琥珀/金色主色，参考 Koodo Reader 对比布局
 class AppColors {
-  // Primary
-  static const Color primary = Color(0xFF1976D2);
-  static const Color primaryLight = Color(0xFF42A5F5);
-  static const Color primaryDark = Color(0xFF0D47A1);
+  AppColors._();
 
-  // Surface
-  static const Color surfaceLight = Color(0xFFFFFBFE);
-  static const Color surfaceDark = Color(0xFF1E1E2E);
-  static const Color cardLight = Color(0xFFFFFFFF);
-  static const Color cardDark = Color(0xFF2A2A3C);
+  // ── Primary: 琥珀色系 ──
+  static const Color primary = Color(0xFFF59E0B);
+  static const Color primaryLight = Color(0xFFFCD34D);
+  static const Color primaryDark = Color(0xFFD97706);
 
-  // Text
-  static const Color textPrimaryLight = Color(0xFF1F1F1F);
-  static const Color textPrimaryDark = Color(0xFFE6E6E6);
-  static const Color textSecondaryLight = Color(0xFF757575);
-  static const Color textSecondaryDark = Color(0xFF9E9E9E);
+  // ── Light Theme ──
+  static const Color lightBackground = Color(0xFFFFFBF5);
+  static const Color lightSurface = Color(0xFFFFF7ED);
+  static const Color lightCard = Color(0xFFFFFFFF);
+  static const Color lightTextPrimary = Color(0xFF3D2B1F);
+  static const Color lightTextSecondary = Color(0xFF8B7355);
+  static const Color lightTextHint = Color(0xFFB8A68E);
+  static const Color lightDivider = Color(0xFFE8DFD3);
+  static const Color lightSidebar = Color(0xFF2C2520);
+  static const Color lightSidebarText = Color(0xFFF5F0EB);
+  static const Color lightSidebarActive = Color(0xFFF59E0B);
+  static const Color lightStatusBar = Color(0xFFF5F0EB);
 
-  // Tab bar
-  static const Color tabActiveLight = Color(0xFF1976D2);
-  static const Color tabActiveDark = Color(0xFF42A5F5);
-  static const Color tabInactiveLight = Color(0xFFBDBDBD);
-  static const Color tabInactiveDark = Color(0xFF555555);
+  // ── Dark Theme ──
+  static const Color darkBackground = Color(0xFF1A1614);
+  static const Color darkSurface = Color(0xFF242019);
+  static const Color darkCard = Color(0xFF2C2520);
+  static const Color darkTextPrimary = Color(0xFFF5F0EB);
+  static const Color darkTextSecondary = Color(0xFFA89882);
+  static const Color darkTextHint = Color(0xFF6B5E50);
+  static const Color darkDivider = Color(0xFF3D362F);
+  static const Color darkSidebar = Color(0xFF0F0D0B);
+  static const Color darkSidebarText = Color(0xFFD4C8B8);
+  static const Color darkSidebarActive = Color(0xFFFBBF24);
+  static const Color darkStatusBar = Color(0xFF0F0D0B);
 
-  // Status bar
-  static const Color statusBarLight = Color(0xFFF5F5F5);
-  static const Color statusBarDark = Color(0xFF181825);
+  // ── Semantic ──
+  static const Color error = Color(0xFFDC2626);
+  static const Color success = Color(0xFF16A34A);
+  static const Color warning = Color(0xFFEA580C);
+  static const Color info = Color(0xFF2563EB);
 
-  // Accent
-  static const Color error = Color(0xFFD32F2F);
-  static const Color success = Color(0xFF388E3C);
-  static const Color warning = Color(0xFFF57C00);
+  // ── Glass ──
+  static const Color glassLight = Color(0x33FFFFFF);
+  static const Color glassDark = Color(0x1A0F0D0B);
 }

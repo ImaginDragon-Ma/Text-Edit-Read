@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'search_bar.dart';
 
 class AppMenuBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onOpenFile;
   final VoidCallback onSaveFile;
   final VoidCallback onSaveFileAs;
   final VoidCallback onToggleTheme;
+  final VoidCallback? onCleanText;
+  final VoidCallback? onFindReplace;
+  final VoidCallback? onToggleSidebar;
+  final VoidCallback? onToggleSettings;
   final bool isDarkTheme;
+  final bool sidebarCollapsed;
+  final bool settingsPanelOpen;
 
   const AppMenuBar({
     super.key,
@@ -13,94 +20,164 @@ class AppMenuBar extends StatelessWidget implements PreferredSizeWidget {
     required this.onSaveFile,
     required this.onSaveFileAs,
     required this.onToggleTheme,
+    this.onCleanText,
+    this.onFindReplace,
+    this.onToggleSidebar,
+    this.onToggleSettings,
     required this.isDarkTheme,
+    this.sidebarCollapsed = false,
+    this.settingsPanelOpen = false,
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(48);
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final width = MediaQuery.of(context).size.width;
 
-    // Mobile: hide menu bar, use AppBar overflow menu
-    if (width < 800) {
+    if (width < 600) {
       return AppBar(
-        title: const Text('Text Edit Read'),
+        toolbarHeight: 48,
+        backgroundColor: theme.colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        title: Row(
+          children: [
+            Icon(Icons.auto_stories, color: theme.colorScheme.primary, size: 22),
+            const SizedBox(width: 8),
+            Text('Text Edit Read',
+                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
+          ],
+        ),
         actions: [
-          IconButton(icon: const Icon(Icons.folder_open), onPressed: onOpenFile),
+          IconButton(icon: const Icon(Icons.search, size: 20), onPressed: onFindReplace),
           PopupMenuButton<String>(
-            onSelected: (value) {
-              switch (value) {
+            onSelected: (v) {
+              switch (v) {
+                case 'open': onOpenFile();
                 case 'save': onSaveFile();
                 case 'save_as': onSaveFileAs();
                 case 'theme': onToggleTheme();
+                case 'clean': onCleanText?.call();
+                case 'find': onFindReplace?.call();
               }
             },
             itemBuilder: (_) => [
+              const PopupMenuItem(value: 'open', child: Text('打开文件')),
               const PopupMenuItem(value: 'save', child: Text('保存')),
               const PopupMenuItem(value: 'save_as', child: Text('另存为')),
-              const PopupMenuItem(value: 'theme', child: Text('切换主题')),
+              const PopupMenuDivider(),
+              const PopupMenuItem(value: 'clean', child: Text('整理文本')),
+              const PopupMenuItem(value: 'find', child: Text('查找替换')),
+              const PopupMenuDivider(),
+              PopupMenuItem(value: 'theme', child: Text(isDarkTheme ? '亮色主题' : '暗色主题')),
             ],
           ),
         ],
       );
     }
 
-    // Desktop: full menu bar
-    return AppBar(
-      title: const Text('Text Edit Read'),
-      actions: [
-        _MenuButton(label: '文件', items: [
-          _MenuItem('打开文件', onOpenFile),
-          _MenuItem('保存', onSaveFile),
-          _MenuItem('另存为', onSaveFileAs),
-        ]),
-        _MenuButton(label: '视图', items: [
-          _MenuItem(isDarkTheme ? '亮色主题' : '暗色主题', onToggleTheme),
-        ]),
-        _MenuButton(label: '帮助', items: [
-          _MenuItem('关于', () => showAboutDialog(
-            context: context,
-            applicationName: 'Text Edit Read',
-            applicationVersion: '0.1.0',
-          )),
-        ]),
-      ],
-    );
-  }
-}
+    // Tablet/Desktop top bar: Logo | Search | Tools
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(bottom: BorderSide(color: theme.dividerColor)),
+      ),
+      child: Row(
+        children: [
+          // Logo
+          GestureDetector(
+            onTap: onToggleSidebar,
+            child: Row(
+              children: [
+                Icon(Icons.auto_stories, color: theme.colorScheme.primary, size: 22),
+                const SizedBox(width: 8),
+                Text('Text Edit Read',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    )),
+              ],
+            ),
+          ),
 
-class _MenuButton extends StatelessWidget {
-  final String label;
-  final List<_MenuItem> items;
+          const SizedBox(width: 20),
 
-  const _MenuButton({required this.label, required this.items});
+          // Search bar (desktop only)
+          if (width >= 1200)
+            Expanded(child: AppSearchBar(onSearch: (_) {}, onClear: () {}))
+          else
+            IconButton(icon: const Icon(Icons.search, size: 20), tooltip: '搜索', onPressed: onFindReplace),
 
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      onSelected: (value) {
-        for (final item in items) {
-          if (item.label == value) {
-            item.onTap();
-            break;
-          }
-        }
-      },
-      itemBuilder: (_) => items
-          .map((i) => PopupMenuItem(value: i.label, child: Text(i.label)))
-          .toList(),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Text(label, style: const TextStyle(fontSize: 14)),
+          const Spacer(),
+
+          // Tool buttons
+          if (width >= 600) ...[
+            _ToolButton(icon: Icons.cleaning_services, tooltip: '整理文本', onPressed: onCleanText),
+            _ToolButton(icon: Icons.find_replace, tooltip: '查找替换', onPressed: onFindReplace),
+            const SizedBox(width: 4),
+          ],
+
+          _ToolButton(
+            icon: isDarkTheme ? Icons.light_mode : Icons.dark_mode,
+            tooltip: isDarkTheme ? '亮色主题' : '暗色主题',
+            onPressed: onToggleTheme,
+          ),
+
+          if (width >= 1200) ...[
+            const SizedBox(width: 4),
+            _ToolButton(
+              icon: Icons.settings,
+              tooltip: '设置',
+              isActive: settingsPanelOpen,
+              onPressed: onToggleSettings,
+            ),
+          ],
+        ],
       ),
     );
   }
 }
 
-class _MenuItem {
-  final String label;
-  final VoidCallback onTap;
-  _MenuItem(this.label, this.onTap);
+class _ToolButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final bool isActive;
+
+  const _ToolButton({
+    required this.icon,
+    required this.tooltip,
+    this.onPressed,
+    this.isActive = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: isActive
+                ? theme.colorScheme.primaryContainer
+                : Colors.transparent,
+          ),
+          child: Icon(icon, size: 20, color: isActive
+              ? theme.colorScheme.onPrimaryContainer
+              : theme.colorScheme.onSurfaceVariant),
+        ),
+      ),
+    );
+  }
 }

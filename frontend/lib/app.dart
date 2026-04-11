@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'features/editor/bloc/editor_bloc.dart';
-import 'features/editor/pages/editor_page.dart';
+import 'features/library/bloc/library_bloc.dart';
+import 'features/library/pages/library_page.dart';
 import 'shared/theme/app_theme.dart';
 
 class App extends StatelessWidget {
@@ -10,8 +11,11 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => EditorBloc(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => EditorBloc()),
+        BlocProvider(create: (_) => LibraryBloc()),
+      ],
       child: BlocBuilder<EditorBloc, EditorState>(
         builder: (context, state) {
           return MaterialApp(
@@ -20,7 +24,7 @@ class App extends StatelessWidget {
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             themeMode: state.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
-            home: const EditorPage(),
+            home: const LibraryPage(),
           );
         },
       ),

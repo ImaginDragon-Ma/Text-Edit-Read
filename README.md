@@ -1,189 +1,289 @@
 # Text-Edit-Read
 
-基于 PyQt5 的文本编辑与处理工具，采用分层架构设计。
+基于 Flutter + FastAPI 的跨平台文本编辑与阅读工具，采用分层架构设计，一套代码覆盖 **Android、iOS、Web、Windows、macOS、Linux** 六大平台。
 
-## 功能特性
+## ✨ 功能特性
 
-- **文件操作**：打开和保存文本文件，支持自动检测文件编码
-- **文本整理**：一键清理文本中的多余空格、空行，自动格式化章节标题
-- **查找功能**：支持向前/向后查找文本内容，高亮显示匹配项
-- **替换功能**：
-  - 全部替换
-  - 仅替换双引号外的内容（保留引用内容不变）
-- **字体缩放**：支持 Ctrl + 鼠标滚轮调整字体大小
+### 📝 文本编辑（核心创新）
+- **智能文本整理**：一键清理多余空格、空行，自动格式化章节标题
+- **高级替换**：全部替换 + 双引号外替换（保留引用内容不变）
+- **查找导航**：支持向前/向后查找，黄色高亮显示匹配项
+- **章节检测**：自动识别「序章」「第X章」，生成可点击目录
 
-## 项目架构
+### 📖 阅读模式
+- 专注阅读体验，1.8 行高中文排版优化
+- 章节目录侧边栏，点击跳转
+- 底部进度条，页码/章节信息
 
-本项目采用分层架构设计，实现关注点分离：
+### 🎨 界面特色
+- **暖色调主题**：琥珀色主色调，深色侧边栏
+- **亮色/暗色主题切换**
+- **响应式布局**：自动适配手机、平板、桌面
+- **流畅动画**：面板展开/折叠弹性动画
 
-```
-changeTXT/
-├── src/
-│   ├── core/                   # 核心业务逻辑
-│   │   ├── text_processor.py   # 文本处理
-│   │   └── file_handler.py      # 文件操作
-│   ├── ui/                     # UI 层
-│   │   ├── main_window.py      # 主窗口
-│   │   ├── dialogs/            # 对话框
-│   │   │   ├── find_dialog.py
-│   │   │   └── replace_dialog.py
-│   │   └── widgets/            # 自定义控件
-│   │       └── zoom_text_edit.py
-│   └── utils/                  # 工具模块
-│       ├── config.py            # 配置管理
-│       └── exceptions.py        # 自定义异常
-├── resources/                  # 资源文件
-│   └── icons/
-│       └── app_icon.jpg
-├── tests/                      # 测试
-│   ├── test_text_processor.py
-│   └── test_file_handler.py
-├── pyproject.toml              # 项目配置
-├── setup.py                    # 安装脚本
-├── requirements.txt            # 依赖列表
-└── main.py                     # 程序入口
-```
+### 📂 文件管理
+- 文件库视图（类似书城），支持网格/列表切换
+- 收藏、搜索、最近打开
+- 支持 UTF-8 / GBK 等多种编码自动检测
 
-## 安装
+---
 
-### 前置要求
+## 🚀 快速开始
 
-- Python 3.7 或更高版本
+### 方式一：网页版（无需安装，推荐体验）
 
-### 安装依赖
+#### 方法 A：在线预览（推荐）
+
+1. 访问在线演示地址（如已部署）
+2. 打开即用，无需下载
+
+#### 方法 B：本地启动 Web 版
+
+**前置要求：**
+- [Flutter SDK](https://flutter.dev/docs/get-started/install) 3.x
+- Dart 3.x
+
+**步骤：**
 
 ```bash
+# 1. 克隆项目
+git clone https://github.com/ImaginDragon-Ma/Text-Edit-Read.git
+cd Text-Edit-Read
+
+# 2. 进入前端目录
+cd frontend
+
+# 3. 获取依赖（国内用户推荐使用镜像）
+export PUB_HOSTED_URL=https://pub.flutter-io.cn
+export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
+flutter pub get
+
+# 4. 启动 Web 开发服务器
+flutter run -d chrome
+
+# 或构建发布版本
+flutter build web --release
+# 构建产物在 build/web/ 目录，可用任意 HTTP 服务器托管
+```
+
+#### 方法 C：部署到静态网站托管
+
+```bash
+# 构建后直接上传 build/web/ 目录到：
+# - GitHub Pages
+# - Vercel
+# - Netlify
+# - Cloudflare Pages
+# - 任何支持静态网站的托管服务
+```
+
+---
+
+### 方式二：桌面客户端（Windows / macOS / Linux）
+
+#### 前置要求
+
+| 平台 | 要求 |
+|------|------|
+| **Windows** | Windows 10+，已安装 [Flutter SDK](https://flutter.dev/docs/get-started/install/windows) |
+| **macOS** | macOS 10.15+，已安装 [Flutter SDK](https://flutter.dev/docs/get-started/install/macos) + Xcode |
+| **Linux** | 已安装 [Flutter SDK](https://flutter.dev/docs/get-started/install/linux) + `clang cmake ninja-build pkg-config libgtk-3-dev` |
+
+#### 步骤
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/ImaginDragon-Ma/Text-Edit-Read.git
+cd Text-Edit-Read/frontend
+
+# 2. 获取依赖（国内镜像）
+export PUB_HOSTED_URL=https://pub.flutter-io.cn
+export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
+flutter pub get
+
+# 3. 构建桌面应用
+# Windows:
+flutter build windows --release
+# 产物在 build/windows/x64/runner/Release/
+
+# macOS:
+flutter build macos --release
+# 产物在 build/macos/Build/Products/Release/
+
+# Linux:
+flutter build linux --release
+# 产物在 build/linux/x64/release/bundle/
+```
+
+#### 运行（开发模式）
+
+```bash
+# Windows
+flutter run -d windows
+
+# macOS
+flutter run -d macos
+
+# Linux
+flutter run -d linux
+```
+
+---
+
+### 方式三：手机 App（Android / iOS）
+
+#### 前置要求
+
+| 平台 | 要求 |
+|------|------|
+| **Android** | Android Studio + Android SDK（API 21+） |
+| **iOS** | macOS + Xcode 15+（需 Apple 开发者账号签名） |
+
+#### 步骤
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/ImaginDragon-Ma/Text-Edit-Read.git
+cd Text-Edit-Read/frontend
+
+# 2. 获取依赖（国内镜像）
+export PUB_HOSTED_URL=https://pub.flutter-io.cn
+export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
+flutter pub get
+
+# 3. 构建 Android APK
+flutter build apk --release
+# 产物在 build/app/outputs/flutter-apk/app-release.apk
+
+# 或构建 App Bundle（推荐上传 Google Play）
+flutter build appbundle --release
+
+# 4. 构建 iOS（仅限 macOS）
+flutter build ios --release
+# 然后在 Xcode 中签名并上传 App Store
+```
+
+#### 运行（开发模式）
+
+```bash
+# 确保设备已连接或模拟器已启动
+flutter devices
+
+# Android
+flutter run -d <device-id>
+
+# iOS
+flutter run -d <device-id>
+```
+
+---
+
+## 🏗️ 项目架构
+
+```
+Text-Edit-Read/
+├── frontend/                    # Flutter 前端（跨平台）
+│   ├── lib/
+│   │   ├── core/               # 领域层（纯 Dart，无 UI 依赖）
+│   │   │   ├── text_processor.dart
+│   │   │   ├── file_handler.dart
+│   │   │   ├── chapter_detector.dart
+│   │   │   └── models/
+│   │   ├── data/               # 数据层
+│   │   │   ├── services/       # 文件服务、API 客户端
+│   │   │   ├── storage/        # Hive 本地存储、SQLite
+│   │   │   └── repositories/   # 文件仓库、设置仓库
+│   │   ├── features/           # 功能模块（Feature-first）
+│   │   │   ├── library/        # 文件库首页
+│   │   │   ├── editor/         # 编辑模式
+│   │   │   ├── reader/         # 阅读模式
+│   │   │   ├── find_replace/   # 查找替换
+│   │   │   ├── chapter_nav/    # 章节导航
+│   │   │   ├── text_processing/# 文本整理
+│   │   │   ├── file_manager/   # 文件管理
+│   │   │   └── settings/       # 设置
+│   │   ├── shared/             # 共享组件与主题
+│   │   └── main.dart           # 入口
+│   ├── test/                   # 测试
+│   └── pubspec.yaml
+│
+├── backend/                     # FastAPI 后端（可选）
+│   ├── app/
+│   │   ├── main.py             # API 入口
+│   │   ├── routers/            # 路由（文本处理、文件操作）
+│   │   ├── services/           # 业务逻辑（迁移自原 Python 版本）
+│   │   └── models/             # Pydantic 模型
+│   └── tests/
+│
+├── src/                         # 原始 PyQt5 版本（保留）
+│   ├── core/                    # Python 核心逻辑
+│   ├── ui/                      # PyQt5 界面
+│   └── utils/
+│
+├── docs/                        # 文档
+│   ├── requirements-analysis.md # 需求分析报告
+│   └── git-operations.md        # Git 操作记录
+│
+└── README.md
+```
+
+## 🧪 运行测试
+
+### 前端测试
+
+```bash
+cd frontend
+
+# 单元测试
+flutter test
+
+# 指定测试文件
+flutter test test/core/text_processor_test.dart
+
+# 带覆盖率
+flutter test --coverage
+```
+
+### 后端测试
+
+```bash
+cd backend
+
+# 安装依赖
 pip install -r requirements.txt
-```
 
-或手动安装：
-
-```bash
-pip install PyQt5 chardet
-```
-
-### 开发环境安装
-
-```bash
-pip install -e ".[dev]"
-```
-
-## 使用方法
-
-### 启动程序
-
-```bash
-python main.py
-```
-
-### 主要功能说明
-
-#### 文件操作
-
-- **打开**：通过菜单 `文件 > 打开` 选择文件
-- **保存**：通过菜单 `文件 > 保存` 保存当前编辑的文本
-
-#### 文本整理
-
-通过菜单 `编辑 > 整理文本` 执行以下操作：
-- 删除开头空格
-- 删除空白段落
-- 自动插入第一章标题
-- 分离章节标题为独立段落
-- 调整换行格式
-
-#### 查找文本
-
-通过菜单 `编辑 > 查找` 打开查找对话框：
-- 输入查找内容
-- 点击"查找上一个"或"查找下一个"进行导航
-- 匹配的文本会以黄色高亮显示
-
-#### 替换文本
-
-通过菜单 `编辑 > 替换` 打开替换对话框：
-- 输入要替换的旧文本和新文本
-- 选择替换模式：
-  - **全部替换**：替换所有匹配项
-  - **双引号外替换**：仅替换双引号外的内容，保留引用内容
-
-#### 字体缩放
-
-在文本编辑器中：
-- 按住 `Ctrl` 键并滚动鼠标滚轮可以放大或缩小字体
-
-## 开发
-
-### 运行测试
-
-```bash
-# 使用 pytest
+# 运行测试
+pip install pytest httpx
 pytest tests/
-
-# 带覆盖率报告
-pytest tests/ --cov=src --cov-report=html
 ```
 
-### 代码风格
+## 🔧 技术栈
 
-项目使用以下工具进行代码质量保证：
+| 层 | 技术 | 说明 |
+|----|------|------|
+| 前端框架 | Flutter 3.x | 六端统一 |
+| 状态管理 | flutter_bloc | 事件驱动 |
+| 本地存储 | Hive + SharedPreferences | 配置和缓存 |
+| HTTP 客户端 | Dio | API 调用 |
+| 后端 | FastAPI | 可选的高级功能 |
+| 原始版本 | PyQt5 | 桌面端（保留） |
 
-- **Black**：代码格式化
-- **MyPy**：类型检查
+## 🤝 贡献
 
-```bash
-# 格式化代码
-black src/ tests/
+欢迎提交 Issue 和 Pull Request！
 
-# 类型检查
-mypy src/
-```
+1. Fork 本仓库
+2. 创建功能分支 (`git checkout -b feat/amazing-feature`)
+3. 提交更改 (`git commit -m 'feat: add amazing feature'`)
+4. 推送到分支 (`git push origin feat/amazing-feature`)
+5. 创建 Pull Request
 
-### 扩展功能
-
-#### 添加新的文本处理函数
-
-在 `src/core/text_processor.py` 中的 `TextProcessor` 类中添加新方法。
-
-#### 添加新的 UI 组件
-
-在 `src/ui/` 下的相应子目录中创建新组件。
-
-#### 添加新的配置项
-
-在 `src/utils/config.py` 中添加新的配置常量。
-
-## 依赖项
-
-| 包 | 版本 | 说明 |
-|---|------|------|
-| PyQt5 | >=5.15.0 | GUI 框架 |
-| chardet | >=5.0.0 | 字符编码检测 |
-
-开发依赖：
-| 包 | 版本 | 说明 |
-|---|------|------|
-| pytest | >=7.0.0 | 测试框架 |
-| pytest-cov | >=4.0.0 | 覆盖率报告 |
-| black | >=22.0.0 | 代码格式化 |
-| mypy | >=0.990 | 类型检查 |
-
-## 注意事项
-
-- 图标文件应放置在 `resources/icons/` 目录下
-- 默认字体为 Arial 12pt
-- 文件保存默认使用 UTF-8 编码
-- 所有核心功能都有完善的错误处理和用户提示
-
-## 版本历史
-
-- **v0.2.0**：架构重构，分层设计，添加类型注解和测试
-- **v0.1.0**：初始版本
-
-## 许可证
+## 📄 许可证
 
 MIT License
 
-## 贡献
+## 🙏 致谢
 
-欢迎提交 Issue 和 Pull Request！
+- [Flutter](https://flutter.dev) — 跨平台 UI 框架
+- [FastAPI](https://fastapi.tiangolo.com) — Python Web 框架
+- [Koodo Reader](https://www.koodoreader.com) — UI 设计参考

@@ -20,27 +20,29 @@ class FileTabBar extends StatelessWidget {
     if (openFiles.isEmpty) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
-    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Container(
-      height: isMobile ? 40 : 44,
+      height: 40,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        border: Border(bottom: BorderSide(color: theme.dividerColor)),
+        color: theme.colorScheme.surfaceContainerLow,
+        border: Border(bottom: BorderSide(color: theme.dividerColor.withValues(alpha: 0.5))),
       ),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         itemCount: openFiles.length,
         itemBuilder: (context, index) {
           final file = openFiles[index];
           final isActive = file.filePath == currentFile?.filePath;
 
-          return _TabItem(
-            file: file,
-            isActive: isActive,
-            onTap: () => onTabSwitch(file.filePath),
-            onClose: () => onTabClose(file.filePath),
+          return Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: _TabChip(
+              file: file,
+              isActive: isActive,
+              onTap: () => onTabSwitch(file.filePath),
+              onClose: () => onTabClose(file.filePath),
+            ),
           );
         },
       ),
@@ -48,35 +50,43 @@ class FileTabBar extends StatelessWidget {
   }
 }
 
-class _TabItem extends StatelessWidget {
+class _TabChip extends StatelessWidget {
   final TextFile file;
   final bool isActive;
   final VoidCallback onTap;
   final VoidCallback onClose;
 
-  const _TabItem({
+  const _TabChip({
     required this.file,
     required this.isActive,
     required this.onTap,
     required this.onClose,
   });
 
+  static const _amberAccent = Color(0xFFF59E0B);
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final labelColor = isActive
-        ? theme.colorScheme.primary
+    final bgColor = isActive
+        ? theme.colorScheme.surface
+        : Colors.transparent;
+    final textColor = isActive
+        ? theme.colorScheme.onSurface
         : theme.colorScheme.onSurfaceVariant;
 
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(8),
           border: Border(
             bottom: BorderSide(
-              color: isActive ? theme.colorScheme.primary : Colors.transparent,
-              width: 2,
+              color: isActive ? _amberAccent : Colors.transparent,
+              width: 2.5,
             ),
           ),
         ),
@@ -88,21 +98,24 @@ class _TabItem extends StatelessWidget {
                 width: 6,
                 height: 6,
                 margin: const EdgeInsets.only(right: 6),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.tertiary,
+                decoration: const BoxDecoration(
+                  color: _amberAccent,
                   shape: BoxShape.circle,
                 ),
               ),
             Text(
               file.fileName,
-              style: TextStyle(color: labelColor, fontSize: 13),
+              style: TextStyle(color: textColor, fontSize: 13, fontWeight: isActive ? FontWeight.w500 : FontWeight.normal),
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(width: 4),
             InkWell(
               onTap: onClose,
               borderRadius: BorderRadius.circular(4),
-              child: Icon(Icons.close, size: 14, color: labelColor),
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: Icon(Icons.close, size: 14, color: textColor.withValues(alpha: 0.6)),
+              ),
             ),
           ],
         ),
