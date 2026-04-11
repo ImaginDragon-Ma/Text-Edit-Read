@@ -1,0 +1,25 @@
+name: text_edit_read
+description: A text editor with chapter navigation, search, and replace.
+version: 0.1.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^8.1.0
+  equatable: ^2.0.5
+  file_picker: ^8.0.0
+  path_provider: ^2.1.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  shared_preferences: ^2.2.0
+  dio: ^5.4.0
+  sqflite: ^2.3.0
+  file_selector: ^1.0.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  test: ^1.24.0
